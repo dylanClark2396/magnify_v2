@@ -1,0 +1,22 @@
+{
+  "name": "collab-websocket-server",
+  "version": "1.0.0",
+  "description": "Real-time collaborative form editor using WebSockets, Yjs, and DynamoDB",
+  "main": "ws-server.ts",
+  "scripts": {
+    "start": "ts-node ws-server.ts",
+    "dev": "nodemon ws-server.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1415.0",
+    "ws": "^8.18.0",
+    "yjs": "^13.6.9"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "nodemon": "^3.0.3"
+  }
+}
