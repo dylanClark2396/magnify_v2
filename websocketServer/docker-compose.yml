@@ -1,0 +1,15 @@
+services:
+  ws:
+    container_name: magnify_ws_server
+    restart: on-failure
+    image: magnify/websocketserver
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - AWS_PROFILE=dclark-magnifyinspect
+      - AWS_REGION=us-east-1
+    volumes:
+      - ~/.aws:/root/.aws:ro

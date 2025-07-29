@@ -1,9 +1,15 @@
 import WebSocket, { WebSocketServer } from 'ws'
 import * as Y from 'yjs'
-import AWS from 'aws-sdk'
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb"
 import { IncomingMessage } from 'http'
 
-const dynamo = new AWS.DynamoDB.DocumentClient()
+const client = new DynamoDBClient({ region: "us-east-1" })
+const docClient = DynamoDBDocumentClient.from(client)
 const wss = new WebSocketServer({ port: 8080 })
 
 const docs = new Map<string, Y.Doc>()
@@ -12,13 +18,16 @@ async function loadDoc(docId: string): Promise<Y.Doc> {
   if (docs.has(docId)) return docs.get(docId)!
 
   const ydoc = new Y.Doc()
-  const res = await dynamo.get({
-    TableName: 'InspectionFormData',
+  console.log("Getting Doc")
+  const res = await docClient.send(new GetCommand({
+    TableName: "InspectionFormData",
     Key: { docId }
-  }).promise()
+  }))
 
-  if (res.Item && res.Item.yjsDoc) {
-    const update = Buffer.from(res.Item.yjsDoc, 'base64')
+  console.log(res)
+
+  if (res.Item && res.Item.doc) {
+    const update = Buffer.from(res.Item.doc, 'base64')
     Y.applyUpdate(ydoc, update)
   }
 
@@ -28,14 +37,15 @@ async function loadDoc(docId: string): Promise<Y.Doc> {
 
 async function saveDoc(docId: string, ydoc: Y.Doc): Promise<void> {
   const update = Y.encodeStateAsUpdate(ydoc)
-  await dynamo.put({
-    TableName: 'InspectionFormData',
-    Item: {
+
+  await docClient.send(new PutCommand({
+    TableName: "InspectionFormData",
+     Item: {
       docId,
-      yjsDoc: update.toString(),
+      doc: Buffer.from(update).toString('base64'),
       updatedAt: new Date().toISOString()
     }
-  }).promise()
+  }))
 }
 
 // Periodic auto-save
@@ -47,6 +57,7 @@ setInterval(() => {
 
 wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
   const url = req.url ? new URL(req.url, 'http://localhost') : null
+
   const docId = url?.searchParams.get('docId')
   if (!docId) return ws.close()
 
