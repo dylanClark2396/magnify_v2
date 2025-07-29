@@ -1,0 +1,49 @@
+name: Deploy Frontend
+on:
+  push:
+    paths-ignore:
+      - websocketServer/**
+      - .github/workflows/docker-ecr.yml
+    branches:
+      - main
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: "Install Node.js"
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22.x'
+
+      - name: "Install and setup pnpm"
+        run: |
+          npm install -g pnpm
+
+      - name: "Install dependencies"
+        run: pnpm install --shamefully-hoist
+
+      - name: "Run build task"
+        run: pnpm run generate
+
+      - name: 'Configure AWS Credentials for audience'
+        uses: 'aws-actions/configure-aws-credentials@v4'
+        with:
+          audience: 'sts.amazonaws.com'
+          aws-region: '${{vars.AWS_REGION}}'
+          role-to-assume: '${{vars.IAM_ROLE}}'
+
+      - name: Deploy Frontend
+        run: |
+          aws s3 cp \
+            --recursive \
+            --region us-east-1 \
+            .output/public/ s3://magnify.com

@@ -80,7 +80,10 @@ const route = useRoute()
 const docId = route.params.docId as string
 
 const doc = new Y.Doc()
-const ws = new WebSocket(`ws://localhost:8080/?docId=${docId}`)
+const websocketUrl = import.meta.env.VITE_WS_URL
+// const websocketUrl = "localhost"
+const ws = new WebSocket(`ws://${websocketUrl}:8080/?docId=${docId}`)
+
 ws.binaryType = 'arraybuffer'
 
 const yRooms = doc.getMap<Y.Map<Y.Map<any>>>('rooms')
