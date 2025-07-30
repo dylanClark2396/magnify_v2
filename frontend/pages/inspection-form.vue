@@ -23,30 +23,42 @@
         </div>
       </div>
 
+      <!-- Rooms -->
       <div v-for="[roomName, room] in rooms" :key="roomName" class="space-y-6">
         <UCard class="bg-gray-800 text-gray-100">
           <template #header>
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h2 class="text-xl font-bold">{{ roomName }}</h2>
-              <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
+              <div class="flex-1">
+                <h2 class="text-xl font-bold">{{ roomName }}</h2>
+              </div>
+
+              <div class="flex items-center gap-3">
                 <UInput
                   v-model="newSectionNames[roomName]"
                   placeholder="New Section Name"
                   size="sm"
-                  class="w-full sm:w-48"
+                  class="w-48"
                 />
                 <UButton
                   size="sm"
                   @click="addSection(roomName)"
                   :disabled="!newSectionNames[roomName]?.trim()"
-                  class="w-full sm:w-auto"
                 >
                   + Add Section
                 </UButton>
+                <UButton
+                  icon="i-heroicons-trash"
+                  color="error"
+                  variant="soft"
+                  size="sm"
+                  @click="removeRoom(roomName)"
+                  title="Delete Room"
+                />
               </div>
             </div>
           </template>
 
+          <!-- Sections -->
           <div
             v-for="[sectionName, section] in room.entries()"
             :key="sectionName"
@@ -54,7 +66,17 @@
           >
             <UCard class="bg-gray-700 min-w-[300px]">
               <template #header>
-                <h3 class="text-lg font-semibold">{{ sectionName }}</h3>
+                <div class="flex justify-between items-center">
+                  <h3 class="text-lg font-semibold">{{ sectionName }}</h3>
+                  <UButton
+                    icon="i-heroicons-trash"
+                    color="error"
+                    variant="soft"
+                    size="xs"
+                    @click="removeSection(roomName, sectionName)"
+                    title="Delete Section"
+                  />
+                </div>
               </template>
 
               <div class="space-y-3">
@@ -95,6 +117,7 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -129,11 +152,13 @@ ws.onopen = () => {
 }
 
 ws.onmessage = (event) => {
+  console.log("On Message: ", event)
   const update = new Uint8Array(event.data as ArrayBuffer)
   Y.applyUpdate(doc, update)
 }
 
 doc.on('update', update => {
+  console.log("doc update: ", update)
   ws.send(update)
 })
 
@@ -198,16 +223,19 @@ function updateField(room: string, section: string, key: string, value: string) 
   }
 }
 
-function handleAddField(roomName: string, sectionName: string) {
-  const nf = newFields[roomName]?.[sectionName]
-  if (nf?.key && nf.value) {
-    updateField(roomName, sectionName, nf.key, nf.value)
-    nf.key = ''
-    nf.value = ''
+function removeSection(roomName: string, sectionName: string) {
+  const roomMap = yRooms.get(roomName)
+  if (roomMap?.has(sectionName)) {
+    roomMap.delete(sectionName)
   }
 }
 
-function sectionMapValue(section: Y.Map<any>, key: string): string {
-  return section.get(key) ?? ''
+function removeRoom(roomName: string) {
+  if (yRooms.has(roomName)) {
+    yRooms.delete(roomName)
+    delete newSectionNames[roomName]
+    delete newFields[roomName]
+  }
 }
+
 </script>
