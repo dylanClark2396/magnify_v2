@@ -81,8 +81,8 @@ const docId = route.params.docId as string
 
 const doc = new Y.Doc()
 // const websocketUrl = import.meta.env.VITE_WS_URL
-const websocketUrl = "localhost"
-const ws = new WebSocket(`ws://${websocketUrl}:8080/?docId=${docId}`)
+const config = useRuntimeConfig();
+const ws = new WebSocket(`${config.public.wsUrl}/?docId=${docId}`)
 
 ws.binaryType = 'arraybuffer'
 
