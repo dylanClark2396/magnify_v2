@@ -1,10 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: VPC + EC2 for WebSocket Docker Server (ECR + SSM Access)
+Description: EC2 WebSocket Server behind ALB pulling Docker image from ECR
 
 Parameters:
-  KeyName:
-    Type: AWS::EC2::KeyPair::KeyName
-    Description: SSH KeyPair to access EC2
   EcrImageUri:
     Type: String
     Description: Full ECR image URI (e.g., 123456789012.dkr.ecr.us-east-1.amazonaws.com/websocketserver:latest)
@@ -34,11 +31,11 @@ Resources:
   InternetGateway:
     Type: AWS::EC2::InternetGateway
 
-  GatewayAttachment:
+  AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
-      VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
 
   RouteTable:
     Type: AWS::EC2::RouteTable
@@ -58,27 +55,39 @@ Resources:
       SubnetId: !Ref Subnet
       RouteTableId: !Ref RouteTable
 
-  SecurityGroup:
+  EC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow TCP 8080
+      GroupDescription: Allow 8080 from ALB
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 8080
           ToPort: 8080
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP from the world
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
-          FromPort: 0
-          ToPort: 0
           CidrIp: 0.0.0.0/0
 
   EC2Role:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -89,13 +98,13 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
-  WebSocketInstanceProfile:
+  InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
         - !Ref EC2Role
 
-  WebSocketInstance:
+    WebSocketInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
@@ -135,3 +144,42 @@ Resources:
           # Pull and run container
           docker run -d -p 8080:8080 ${EcrImageUri}
 
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      VpcId: !Ref VPC
+      Protocol: HTTP
+      Port: 8080
+      TargetType: instance
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckPort: 8080
+      Matcher:
+        HttpCode: 200-499
+      Targets:
+        - Id: !Ref WebSocketInstance
+          Port: 8080
+      Name: websocket-tg
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: websocket-alb
+      Subnets:
+        - !Ref Subnet
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '120'
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
