@@ -2,6 +2,9 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: EC2 WebSocket Server behind ALB pulling Docker image from ECR
 
 Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH KeyPair to access EC2
   EcrImageUri:
     Type: String
     Description: Full ECR image URI (e.g., 123456789012.dkr.ecr.us-east-1.amazonaws.com/websocketserver:latest)
@@ -17,21 +20,32 @@ Resources:
         - Key: Name
           Value: websocket-vpc
 
-  Subnet:
+  SubnetA:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
       CidrBlock: 10.0.1.0/24
-      MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: websocket-subnet
+          Value: websocket-subnet-a
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs '' ]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: websocket-subnet-b
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
 
-  AttachGateway:
+  GatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
@@ -49,10 +63,16 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  SubnetRouteTableAssociation:
+  SubnetARouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      SubnetId: !Ref Subnet
+      SubnetId: !Ref SubnetA
+      RouteTableId: !Ref RouteTable
+
+  SubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref SubnetB
       RouteTableId: !Ref RouteTable
 
   EC2SecurityGroup:
@@ -98,20 +118,20 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 
-  InstanceProfile:
+  WebSocketInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
         - !Ref EC2Role
 
-    WebSocketInstance:
+  WebSocketInstance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: t3.micro
       KeyName: !Ref KeyName
-      SubnetId: !Ref Subnet
+      SubnetId: !Ref SubnetA
       SecurityGroupIds:
-        - !Ref SecurityGroup
+        - !Ref EC2SecurityGroup
       IamInstanceProfile: !Ref WebSocketInstanceProfile
       ImageId: ami-01edd5711cfe3825c
       Tags:
@@ -172,9 +192,9 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: websocket-alb
       Subnets:
-        - !Ref Subnet
+        - !Ref SubnetA
+        - !Ref SubnetB
       SecurityGroups:
         - !Ref ALBSecurityGroup
       Scheme: internet-facing
