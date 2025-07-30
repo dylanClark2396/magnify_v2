@@ -5,18 +5,31 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <h1 class="text-2xl sm:text-3xl font-semibold">Inspection Form</h1>
 
-        <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
           <UInput
             v-model="newRoomName"
             placeholder="New Room Name"
             size="sm"
-            class="w-full sm:w-48"
+            class="flex-1 sm:w-48"
           />
+
+          <!-- Icon button for mobile -->
           <UButton
+            icon="i-heroicons-plus"
             @click="addRoom"
             color="primary"
             :disabled="!newRoomName.trim()"
-            class="w-full sm:w-auto"
+            class="block sm:hidden w-10 justify-center"
+            title="Add Room"
+          />
+
+          <!-- Text + icon button for desktop -->
+          <UButton
+            icon="i-heroicons-plus"
+            @click="addRoom"
+            color="primary"
+            :disabled="!newRoomName.trim()"
+            class="hidden sm:inline-flex"
           >
             + Add Room
           </UButton>
@@ -32,26 +45,41 @@
                 <h2 class="text-xl font-bold">{{ roomName }}</h2>
               </div>
 
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                 <UInput
                   v-model="newSectionNames[roomName]"
                   placeholder="New Section Name"
                   size="sm"
-                  class="w-48"
+                  class="flex-1 sm:w-48"
                 />
+
+                <!-- Add Section Button -->
                 <UButton
+                  icon="i-heroicons-plus"
                   size="sm"
                   @click="addSection(roomName)"
                   :disabled="!newSectionNames[roomName]?.trim()"
+                  class="block sm:hidden w-10 justify-center"
+                  title="Add Section"
+                />
+                <UButton
+                  icon="i-heroicons-plus"
+                  size="sm"
+                  @click="addSection(roomName)"
+                  :disabled="!newSectionNames[roomName]?.trim()"
+                  class="hidden sm:inline-flex"
                 >
                   + Add Section
                 </UButton>
+
+                <!-- Delete Room Button -->
                 <UButton
                   icon="i-heroicons-trash"
                   color="error"
                   variant="soft"
                   size="sm"
-                  @click="removeRoom(roomName)"
+                  @click="confirmRoomDelete(roomName)"
+                  class="w-10 justify-center"
                   title="Delete Room"
                 />
               </div>
@@ -73,7 +101,8 @@
                     color="error"
                     variant="soft"
                     size="xs"
-                    @click="removeSection(roomName, sectionName)"
+                    @click="confirmSectionDelete(roomName, sectionName)"
+                    class="w-8 justify-center"
                     title="Delete Section"
                   />
                 </div>
@@ -99,6 +128,11 @@
                     />
                   </div>
 
+                  <!-- Render picture uploader -->
+                  <div v-else-if="fieldKey === 'pictures'" class="flex-1 w-full">
+                    pictures uploader here
+                  </div>
+
                   <!-- Default input for other fields -->
                   <UInput
                     v-else
@@ -115,6 +149,39 @@
       </div>
     </UContainer>
   </div>
+  <!-- Confirm Delete Room Modal -->
+  <UModal v-model:open="showDeleteRoomModal">
+    <template #header>
+      <h2 class="text-lg font-semibold text-red-500">Delete Room</h2>
+    </template>
+     <template #body>
+       <div>
+         <p>Are you sure you want to delete the room <strong>{{ roomToDelete }}</strong> and all its sections?</p>
+         <div class="flex justify-end gap-2">
+           <UButton label="Delete" color="error" @click="deleteConfirmedRoom" />
+         </div>
+       </div>
+     </template>
+  </UModal>
+
+  <!-- Confirm Delete Section Modal -->
+  <UModal v-model:open="showDeleteSectionModal">
+    <template #header>
+      <h2 class="text-lg font-semibold text-red-500">Delete Section</h2>
+    </template>
+     <template #body>
+       <div>
+         <p>
+           Are you sure you want to delete the section
+           <strong>{{ sectionToDelete?.section }}</strong> in room
+           <strong>{{ sectionToDelete?.room }}</strong>?
+         </p>
+         <div class="flex justify-end gap-2">
+           <UButton label="Delete" color="error" @click="deleteConfirmedSection" />
+         </div>
+       </div>
+     </template>
+  </UModal>
 </template>
 
 
@@ -124,19 +191,18 @@ import { useRoute } from 'vue-router'
 import * as Y from 'yjs'
 import type { RadioGroupItem } from '@nuxt/ui'
 
-useHead({ htmlAttrs: { class: 'dark' } }) // Force dark mode
+definePageMeta({ middleware: ['check-doc-id'] })
 
 const route = useRoute()
 const docId = route.query.docId as string
 
-console.log(route)
-
 const doc = new Y.Doc()
-// const websocketUrl = import.meta.env.VITE_WS_URL
 const config = useRuntimeConfig();
 const ws = new WebSocket(`${config.public.wsUrl}/?docId=${docId}`)
 
 ws.binaryType = 'arraybuffer'
+
+const yMetaData = doc.getMap<Y.Map<Y.Map<any>>>('metadata')
 
 const yRooms = doc.getMap<Y.Map<Y.Map<any>>>('rooms')
 const rooms = ref<Map<string, Y.Map<Y.Map<any>>>>(new Map())
@@ -147,18 +213,22 @@ const newFields = reactive<Record<string, Record<string, { key: string; value: s
 
 const conditionOptions = ref<RadioGroupItem[]>(['Good', 'Fair', 'Poor', 'None', 'N/A'])
 
+const showDeleteRoomModal = ref(false)
+const showDeleteSectionModal = ref(false)
+
+const roomToDelete = ref<string | null>(null)
+const sectionToDelete = ref<{ room: string; section: string } | null>(null)
+
 ws.onopen = () => {
   console.log('WebSocket connected')
 }
 
 ws.onmessage = (event) => {
-  console.log("On Message: ", event)
   const update = new Uint8Array(event.data as ArrayBuffer)
   Y.applyUpdate(doc, update)
 }
 
 doc.on('update', update => {
-  console.log("doc update: ", update)
   ws.send(update)
 })
 
@@ -174,7 +244,7 @@ function ensureNewField(roomName: string, sectionName: string) {
 function ensureDefaultFields(room: Y.Map<Y.Map<any>>, sectionName: string) {
   const section = room.get(sectionName)
   if (!section) return
-  const defaults = ['condition', 'materials', 'location', 'pictures', 'observations']
+  const defaults = ['condition', 'materials', 'location', 'observations', 'pictures']
   for (const key of defaults) {
     if (!section.has(key)) section.set(key, '')
   }
@@ -185,15 +255,16 @@ const syncRooms = () => {
 
   rooms.value.forEach((roomMap, roomName) => {
     roomMap.forEach((section, sectionName) => {
+      console.log(section)
       ensureNewField(roomName, sectionName)
     })
   })
 }
 
 onMounted(() => {
-  const route = useRoute()
   yRooms.observeDeep(syncRooms)
   syncRooms()
+  console.log(yMetaData)
 })
 
 function addRoom() {
@@ -235,6 +306,32 @@ function removeRoom(roomName: string) {
     yRooms.delete(roomName)
     delete newSectionNames[roomName]
     delete newFields[roomName]
+  }
+}
+
+function confirmRoomDelete(roomName: string) {
+  roomToDelete.value = roomName
+  showDeleteRoomModal.value = true
+}
+
+function confirmSectionDelete(room: string, section: string) {
+  sectionToDelete.value = { room, section }
+  showDeleteSectionModal.value = true
+}
+
+function deleteConfirmedRoom() {
+  if (roomToDelete.value) {
+    removeRoom(roomToDelete.value)
+    roomToDelete.value = null
+    showDeleteRoomModal.value = false
+  }
+}
+
+function deleteConfirmedSection() {
+  if (sectionToDelete.value) {
+    removeSection(sectionToDelete.value.room, sectionToDelete.value.section)
+    sectionToDelete.value = null
+    showDeleteSectionModal.value = false
   }
 }
 

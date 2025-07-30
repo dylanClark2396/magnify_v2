@@ -17,7 +17,7 @@ const docs = new Map<string, Y.Doc>()
 async function loadDoc(docId: string): Promise<Y.Doc> {
   if (docs.has(docId)) return docs.get(docId)!
 
-  const ydoc = new Y.Doc()
+  const doc = new Y.Doc()
   console.log("Getting Doc")
   const res = await docClient.send(new GetCommand({
     TableName: "InspectionFormData",
@@ -28,15 +28,15 @@ async function loadDoc(docId: string): Promise<Y.Doc> {
 
   if (res.Item && res.Item.doc) {
     const update = Buffer.from(res.Item.doc, 'base64')
-    Y.applyUpdate(ydoc, update)
+    Y.applyUpdate(doc, update)
   }
 
-  docs.set(docId, ydoc)
-  return ydoc
+  docs.set(docId, doc)
+  return doc
 }
 
-async function saveDoc(docId: string, ydoc: Y.Doc): Promise<void> {
-  const update = Y.encodeStateAsUpdate(ydoc)
+async function saveDoc(docId: string, doc: Y.Doc): Promise<void> {
+  const update = Y.encodeStateAsUpdate(doc)
 
   await docClient.send(new PutCommand({
     TableName: "InspectionFormData",
@@ -50,8 +50,8 @@ async function saveDoc(docId: string, ydoc: Y.Doc): Promise<void> {
 
 // Periodic auto-save
 setInterval(() => {
-  for (const [docId, ydoc] of docs.entries()) {
-    void saveDoc(docId, ydoc)
+  for (const [docId, doc] of docs.entries()) {
+    void saveDoc(docId, doc)
   }
 }, 5000)
 
@@ -61,13 +61,13 @@ wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
   const docId = url?.searchParams.get('docId')
   if (!docId) return ws.close()
 
-  const ydoc = await loadDoc(docId)
-  const initialUpdate = Y.encodeStateAsUpdate(ydoc)
+  const doc = await loadDoc(docId)
+  const initialUpdate = Y.encodeStateAsUpdate(doc)
   ws.send(initialUpdate)
 
   ws.on('message', (msg: WebSocket.RawData) => {
     const update = new Uint8Array(msg as Buffer)
-    Y.applyUpdate(ydoc, update)
+    Y.applyUpdate(doc, update)
 
     // Broadcast to others
     wss.clients.forEach((client) => {

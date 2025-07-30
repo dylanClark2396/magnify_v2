@@ -14,6 +14,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       wsUrl: process.env.WS_URL || 'ws://localhost:8080',
+      apiBase: 'https://kbptpvsmdk.execute-api.us-east-1.amazonaws.com'
     }
+  },
+  colorMode: {
+    preference: 'dark'
   }
 })

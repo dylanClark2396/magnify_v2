@@ -1,0 +1,20 @@
+{
+  "name": "main-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "zip": "zip -r main.zip dist/ node_modules/",
+    "zip-windows": "7z a main.zip dist\\ node_modules\\"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.835.0",
+    "@aws-sdk/lib-dynamodb": "^3.835.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.123",
+    "@types/node": "^24.0.4",
+    "typescript": "^5.4.5"
+  }
+}
