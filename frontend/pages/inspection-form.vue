@@ -77,7 +77,9 @@ import type { RadioGroupItem } from '@nuxt/ui'
 useHead({ htmlAttrs: { class: 'dark' } }) // Force dark mode
 
 const route = useRoute()
-const docId = route.params.docId as string
+const docId = route.query.docId as string
+
+console.log(route)
 
 const doc = new Y.Doc()
 // const websocketUrl = import.meta.env.VITE_WS_URL
