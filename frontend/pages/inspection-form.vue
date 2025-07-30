@@ -1,64 +1,91 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-gray-100 p-8">
-    <UContainer class="space-y-8">
+  <div class="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8">
+    <UContainer class="space-y-8 max-w-5xl mx-auto">
       <!-- Header -->
-      <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-semibold">Inspection Form</h1>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+        <h1 class="text-2xl sm:text-3xl font-semibold">Inspection Form</h1>
 
-        <div class="flex gap-4 items-center">
-          <UInput v-model="newRoomName" placeholder="New Room Name" size="sm" class="w-48" />
-          <UButton @click="addRoom" color="primary" :disabled="!newRoomName.trim()">+ Add Room</UButton>
+        <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <UInput
+            v-model="newRoomName"
+            placeholder="New Room Name"
+            size="sm"
+            class="w-full sm:w-48"
+          />
+          <UButton
+            @click="addRoom"
+            color="primary"
+            :disabled="!newRoomName.trim()"
+            class="w-full sm:w-auto"
+          >
+            + Add Room
+          </UButton>
         </div>
       </div>
 
-      <div v-for="[roomName, room] in rooms" :key="roomName">
+      <div v-for="[roomName, room] in rooms" :key="roomName" class="space-y-6">
         <UCard class="bg-gray-800 text-gray-100">
           <template #header>
-            <div class="flex justify-between items-center">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h2 class="text-xl font-bold">{{ roomName }}</h2>
-              <div class="flex gap-3">
-                <UInput v-model="newSectionNames[roomName]" placeholder="New Section Name" size="sm" class="w-48" />
-                <UButton size="sm" @click="addSection(roomName)" :disabled="!newSectionNames[roomName]?.trim()">
+              <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <UInput
+                  v-model="newSectionNames[roomName]"
+                  placeholder="New Section Name"
+                  size="sm"
+                  class="w-full sm:w-48"
+                />
+                <UButton
+                  size="sm"
+                  @click="addSection(roomName)"
+                  :disabled="!newSectionNames[roomName]?.trim()"
+                  class="w-full sm:w-auto"
+                >
                   + Add Section
                 </UButton>
               </div>
             </div>
           </template>
 
-          <div v-for="[sectionName, section] in room.entries()" :key="sectionName" class="space-y-4 mt-4">
-            <UCard class="bg-gray-700">
+          <div
+            v-for="[sectionName, section] in room.entries()"
+            :key="sectionName"
+            class="space-y-4 mt-4 overflow-x-auto"
+          >
+            <UCard class="bg-gray-700 min-w-[300px]">
               <template #header>
                 <h3 class="text-lg font-semibold">{{ sectionName }}</h3>
               </template>
 
               <div class="space-y-3">
-                <div v-for="[fieldKey, value] in (section as Y.Map<any>).entries()" :key="fieldKey"
-                  class="flex items-center gap-4">
-                  <span class="w-32 font-medium">{{ fieldKey }}</span>
+                <div
+                  v-for="[fieldKey, value] in (section as Y.Map<any>).entries()"
+                  :key="fieldKey"
+                  class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4"
+                >
+                  <span class="w-full sm:w-32 font-medium">{{ fieldKey }}</span>
 
                   <!-- Render radio group for "condition" field -->
-                  <div v-if="fieldKey === 'condition'" class="flex-1">
-                    <URadioGroup :modelValue="section.get(fieldKey) ?? ''"
+                  <div v-if="fieldKey === 'condition'" class="flex-1 w-full">
+                    <URadioGroup
+                      :modelValue="section.get(fieldKey) ?? ''"
                       :items="conditionOptions"
-                      @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)" orientation="horizontal" color="secondary" :ui="{base: 'ring-gray-900'}"/>
+                      @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)"
+                      orientation="horizontal"
+                      color="secondary"
+                      :ui="{ base: 'ring-gray-900' }"
+                    />
                   </div>
 
                   <!-- Default input for other fields -->
-                  <UInput v-else :modelValue="value"
-                    @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)" size="sm"
-                    class="flex-1" />
+                  <UInput
+                    v-else
+                    :modelValue="value"
+                    @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)"
+                    size="sm"
+                    class="flex-1 w-full"
+                  />
                 </div>
-
-                <!-- Add New Field Inputs -->
-                <!-- <div v-if="newFields[roomName]?.[sectionName]" class="flex items-center gap-3 pt-2">
-                  <UInput placeholder="Field Key" v-model="newFields[roomName][sectionName].key" size="sm"
-                    class="w-1/3" />
-                  <UInput placeholder="Value" v-model="newFields[roomName][sectionName].value" size="sm"
-                    class="w-2/3" />
-                  <UButton size="sm" color="primary" @click="handleAddField(roomName, sectionName)">
-                    + Add Field
-                  </UButton>
-                </div> -->
               </div>
             </UCard>
           </div>
@@ -139,6 +166,7 @@ const syncRooms = () => {
 }
 
 onMounted(() => {
+  const route = useRoute()
   yRooms.observeDeep(syncRooms)
   syncRooms()
 })
