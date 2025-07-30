@@ -1,7 +1,7 @@
 name: Deploy Frontend
 
 env:
-  WS_URL: ws://ec2-18-212-45-123.compute-1.amazonaws.com:8080
+  WS_URL: ws://ec2-3-87-32-33.compute-1.amazonaws.com:8080
 
 on:
   push:
