@@ -138,11 +138,19 @@ Resources:
           # Ensure AWS CLI is in path
           export PATH=$PATH:/usr/local/bin
 
+          # Create the .env file dynamically
+          cat <<EOF > /home/ec2-user/app.env
+          EOF
+
+          # Give permission to Docker to read the file
+          chown ec2-user:ec2-user /home/ec2-user/app.env
+          chmod 600 /home/ec2-user/app.env
+
           # Authenticate Docker to ECR
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${EcrImageUri}
 
           # Pull and run container
-          docker run -d --restart unless-stopped -p 8080:8080 ${EcrImageUri}
+          docker run --env-file /home/ec2-user/app.env -d --restart unless-stopped -p 8080:8080 ${EcrImageUri}
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
