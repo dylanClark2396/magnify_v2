@@ -6,6 +6,7 @@ RUN corepack enable
 
 COPY . /magnify_ws_server
 WORKDIR /magnify_ws_server
+COPY .env .env
 
 FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
@@ -17,4 +18,4 @@ COPY --from=prod-deps /magnify_ws_server/node_modules ./node_modules
 COPY package*.json ./
 EXPOSE 8080
 
-CMD [ "node", "--env-file", ".env", "dist/index.js" ]
+CMD [ "node", "dist/index.js" ]

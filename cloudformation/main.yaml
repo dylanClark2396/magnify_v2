@@ -142,7 +142,7 @@ Resources:
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${EcrImageUri}
 
           # Pull and run container
-          docker run -d -p 8080:8080 ${EcrImageUri}
+          docker run -d --restart unless-stopped -p 8080:8080 ${EcrImageUri}
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
