@@ -1,11 +1,12 @@
 name: Deploy Frontend
-# on:
-#   push:
-#     paths-ignore:
-#       - websocketServer/**
-#       - .github/workflows/docker-ecr.yml
-#     branches:
-#       - main
+on:
+  push:
+    paths-ignore:
+      - websocketServer/**
+      - cloudformation/**
+      - .github/workflows/docker-ecr.yml
+    branches:
+      - main
 
 on:
   workflow_dispatch:
