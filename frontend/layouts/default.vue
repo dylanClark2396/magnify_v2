@@ -7,7 +7,7 @@
         <!-- Desktop Nav -->
         <nav class="hidden md:flex space-x-6 font-ui-sans">
           <NuxtLink to="/create" class="text-muted hover:text-primary font-medium transition-colors">
-            Create Inspection
+            Create Report
           </NuxtLink>
         </nav>
 
