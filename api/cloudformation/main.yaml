@@ -79,6 +79,13 @@ Resources:
       RouteKey: "POST /doc"
       Target: !Sub integrations/${MainApiIntegration}
 
+  MainApiDocsRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MainApi
+      RouteKey: "GET /docs"
+      Target: !Sub integrations/${MainApiIntegration}
+
   ### Stage ###
   MainApiStage:
     Type: AWS::ApiGatewayV2::Stage
