@@ -1,5 +1,5 @@
 <template>
-  <div class="h-[calc(100vh-64px)] flex items-center justify-center px-4">
+  <div class="h-[calc(100vh-128px)] flex items-center justify-center px-4">
     <div class="w-full max-w-4xl flex flex-col md:flex-row justify-center items-stretch gap-6">
       
       <!-- Open a Doc -->

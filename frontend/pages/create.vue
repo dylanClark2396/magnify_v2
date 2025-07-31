@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-white py-12 px-4">
+  <div class=" bg-gray-900 text-white py-6 px-4">
     <UContainer class="space-y-12 max-w-3xl mx-auto">
       <h1 class="text-3xl font-bold text-center">Create New Inspection Report</h1>
 

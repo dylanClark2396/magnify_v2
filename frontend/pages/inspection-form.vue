@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8">
+  <div class=" bg-gray-900 text-gray-100 p-4 sm:p-8">
     <UContainer class="space-y-8 max-w-5xl mx-auto">
 
       <!-- Header -->
@@ -17,28 +17,45 @@
         </div>
       </div>
 
-      <!-- Metadata Section -->
-      <UCard v-if="metadata" class="bg-gray-800 text-gray-100">
-        <template #header>
-          <h2 class="text-xl font-semibold">Inspector & Property Metadata</h2>
-        </template>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-          <template v-for="[sectionKey, sectionMap] in metadata">
-            <template v-for="[fieldKey, fieldValue] in sectionMap.entries()">
-              <div v-if="sectionKey === 'property' && fieldKey === 'attendance'" class="md:col-span-2">
-                <UCheckboxGroup :modelValue="fieldValue.toArray()"
-                  @update:modelValue="val => updateMetadataField(sectionKey, fieldKey, val)" :items="attendanceOptions"
-                  legend="Attendance" orientation="horizontal" color="primary" />
-              </div>
-
-              <UInput v-else :key="sectionKey + '-' + fieldKey" :modelValue="fieldValue"
-                @update:modelValue="val => updateMetadataField(sectionKey, fieldKey, val)"
-                :placeholder="`${sectionKey} ${fieldKey}`" />
-            </template>
+      <div class="space-y-6">
+        <!-- Inspector Info -->
+        <UCard class="bg-gray-800">
+          <template #header>
+            <h2 class="text-xl font-semibold">Inspector</h2>
           </template>
-        </div>
-      </UCard>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UInput :model-value="metadata.get('inspector')?.get('name') ?? ''"
+              @update:model-value="val => updateMetadataField('inspector', 'name', val)" placeholder="Name" />
+            <UInput :model-value="metadata.get('inspector')?.get('company') ?? ''"
+              @update:model-value="val => updateMetadataField('inspector', 'company', val)" placeholder="Company" />
+            <UInput :model-value="metadata.get('inspector')?.get('address') ?? ''"
+              @update:model-value="val => updateMetadataField('inspector', 'address', val)" placeholder="Address"
+              class="md:col-span-2" />
+          </div>
+        </UCard>
+
+        <!-- Property Info -->
+        <UCard class="bg-gray-800">
+          <template #header>
+            <h2 class="text-xl font-semibold">Property</h2>
+          </template>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UInput :model-value="metadata.get('property')?.get('type') ?? ''"
+              @update:model-value="val => updateMetadataField('property', 'type', val)"
+              placeholder="Property Type (e.g. Condo)" />
+            <UInput :model-value="metadata.get('property')?.get('occupancy') ?? ''"
+              @update:model-value="val => updateMetadataField('property', 'occupancy', val)"
+              placeholder="Occupancy (e.g. Occupied - Furnished)" />
+            <div class="md:col-span-2">
+              <UCheckboxGroup :model-value="metadata.get('property')?.get('attendance') ?? []"
+                @update:model-value="val => updateMetadataField('property', 'attendance', val)"
+                :items="attendanceOptions" legend="Attendance" orientation="horizontal" />
+            </div>
+          </div>
+        </UCard>
+      </div>
 
       <!-- Rooms -->
       <div v-for="[roomName, room] in rooms" :key="roomName" class="space-y-6">
@@ -214,8 +231,8 @@ function ensureDefaultFields(room: Y.Map<Y.Map<any>>, sectionName: string) {
   if (!section) return
 
   const defaults = ['condition', 'materials', 'location', 'observations', 'pictures']
-  for (const key in defaults) {
-    if (!section.has(key)) section.set(key, defaults[key]);
+  for (const key of defaults) {
+    if (!section.has(key)) section.set(key, '');
   }
 }
 
