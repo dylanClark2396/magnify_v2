@@ -18,31 +18,34 @@ export const handler = async (
     "Access-Control-Allow-Credentials": true
   }
 
-  switch (event.routeKey) {
-    case "/POST doc":
-      const body = JSON.parse(event.body || '{}')
-    
-      if (!body.docId || !body.doc) {
-        return { statusCode: 400, body: 'Missing required fields' }
-      }
-    
-      await docClient.send(
-        new PutCommand({
-          TableName: 'InspectionFormData',
-          Item: {
-            docId: body.docId,
-            doc: body.doc,
-            updatedAt: new Date().toISOString()
-          }
-        })
-      )
-    
-      return {
-        statusCode: 200,
-        headers: headers,
-        body: JSON.stringify({ message: 'Saved' })
-      }
-  }
+  console.log("event context:", event.requestContext)
+  console.log("event rawpath:", event.rawPath)
 
-  return { statusCode: 404, headers: headers, body: 'Not found' }
+  if (event.requestContext.http.method === 'POST' && event.rawPath === '/doc') {
+    const body = JSON.parse(event.body || '{}')
+  
+    if (!body.docId || !body.doc) {
+      return { statusCode: 400, body: 'Missing required fields' }
+    }
+  
+    await docClient.send(
+      new PutCommand({
+        TableName: 'InspectionFormData',
+        Item: {
+          docId: body.docId,
+          doc: body.doc,
+          updatedAt: new Date().toISOString()
+        }
+      })
+    )
+  
+    return {
+      statusCode: 200,
+      headers: headers,
+      body: JSON.stringify({ message: 'Saved' })
+    }
+  } else {
+
+    return { statusCode: 404, headers: headers, body: 'Not found' }
+  }
 }

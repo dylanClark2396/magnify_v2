@@ -26,12 +26,8 @@
           <UInput v-model="property.type" placeholder="Property Type (e.g. Condo)" />
           <UInput v-model="property.occupancy" placeholder="Occupancy (e.g. Occupied - Furnished)" />
           <div class="md:col-span-2">
-            <UCheckboxGroup
-              v-model="property.attendance"
-              :items="attendanceOptions"
-              legend="Attendance"
-              orientation="horizontal"
-            />
+            <UCheckboxGroup v-model="property.attendance" :items="attendanceOptions" legend="Attendance"
+              orientation="horizontal" />
           </div>
         </div>
       </UCard>
@@ -54,7 +50,7 @@ import { v4 as uuidv4 } from 'uuid'
 import * as Y from 'yjs'
 import type { Inspector, Property, MetaData } from '~/domain'
 import type { CheckboxGroupItem } from '@nuxt/ui'
-import  { saveDoc } from '~/api'
+import { saveDoc } from '~/api'
 
 // Form state
 const inspector = ref<Inspector>({
@@ -85,15 +81,29 @@ const router = useRouter()
 async function createReport() {
   const docId = uuidv4()
 
-  const metadata: MetaData = {
-    inspector: inspector.value,
-    property: property.value
-  }
-
-  // Create a new Y.Doc and store the metadata in it
+  // Create new Y.Doc
   const doc = new Y.Doc()
-  const map = doc.getMap<MetaData>('metadata')
-  map.set('data', metadata)
+
+  // Get or create the top-level metadata map
+  const metaMap = doc.getMap('metadata')
+
+  // Create nested Y.Maps for inspector and property
+  const inspectorMap = new Y.Map()
+  inspectorMap.set('name', inspector.value.name)
+  inspectorMap.set('company', inspector.value.company)
+  inspectorMap.set('address', inspector.value.address)
+
+  const propertyMap = new Y.Map()
+  propertyMap.set('type', property.value.type)
+  propertyMap.set('occupancy', property.value.occupancy)
+
+  const attendanceArray = new Y.Array<string>()
+  property.value.attendance.forEach(att => attendanceArray.push([att]))
+  propertyMap.set('attendance', attendanceArray)
+
+  // Set nested maps inside metadata map
+  metaMap.set('inspector', inspectorMap)
+  metaMap.set('property', propertyMap)
 
   await saveDoc(docId, doc)
 

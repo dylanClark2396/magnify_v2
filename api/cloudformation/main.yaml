@@ -72,12 +72,11 @@ Resources:
       IntegrationMethod: POST
       PayloadFormatVersion: '2.0'
 
-  ### ANY /{proxy+} Route ###
-  MainApiProxyRoute:
+  MainApiDocRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref MainApi
-      RouteKey: 'ANY /{proxy+}'
+      RouteKey: "POST /doc"
       Target: !Sub integrations/${MainApiIntegration}
 
   ### Stage ###
