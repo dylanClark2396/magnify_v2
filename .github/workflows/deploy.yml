@@ -52,4 +52,4 @@ jobs:
           aws s3 cp \
             --recursive \
             --region us-east-1 \
-            .output/public/ s3://magnify.com/magnify_v2
+            .output/public/ s3://magnify.com/
