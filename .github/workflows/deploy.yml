@@ -1,7 +1,7 @@
 name: Deploy Frontend
 
 env:
-  WS_URL: ws://magnif-LoadB-FfpaQoAcWRpr-1410900718.us-east-1.elb.amazonaws.com:80
+  WS_URL: wss://magnif-LoadB-FfpaQoAcWRpr-1410900718.us-east-1.elb.amazonaws.com:443
 
 on:
   push:
