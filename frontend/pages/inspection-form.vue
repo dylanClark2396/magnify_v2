@@ -107,8 +107,8 @@
                       orientation="horizontal" color="secondary" :ui="{ base: 'ring-gray-900' }" />
                   </div>
 
-                  <div v-else-if="fieldKey === 'pictures'" class="flex-1 w-full">
-                    <UFileUpload multiple :modelValue="value" @update:modelValue="val => updatePictureField(roomName, sectionName, fieldKey, val)" class="w-24" />
+                  <div v-else-if="fieldKey === 'pictures'">
+                    <UFileUpload multiple :modelValue="value" @update:modelValue="val => updatePictureField(roomName, sectionName, fieldKey, val)" />
                   </div>
 
                   <UInput v-else :modelValue="value"
