@@ -7,7 +7,10 @@ Parameters:
     Description: SSH KeyPair to access EC2
   EcrImageUri:
     Type: String
-    Description: Full ECR image URI (e.g., 123456789012.dkr.ecr.us-east-1.amazonaws.com/websocketserver:latest)
+    Description: Full ECR image URI
+  AcmCertificateArn:
+    Type: String
+    Description: ARN of the ACM certificate for HTTPS
 
 Resources:
   VPC:
@@ -92,12 +95,16 @@ Resources:
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow HTTP from the world
+      GroupDescription: Allow HTTP and HTTPS from the world
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -151,35 +158,19 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
           set -xe
-
-          # Update and install packages
           yum update -y
           yum install -y docker 
-
-          # Start and enable Docker
           systemctl enable docker
           systemctl start docker
-
-          # Install AWS CLI v2
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
           ./aws/install
-
-          # Ensure AWS CLI is in path
           export PATH=$PATH:/usr/local/bin
-
-          # Create the .env file dynamically
           cat <<EOF > /home/ec2-user/app.env
           EOF
-
-          # Give permission to Docker to read the file
           chown ec2-user:ec2-user /home/ec2-user/app.env
           chmod 600 /home/ec2-user/app.env
-
-          # Authenticate Docker to ECR
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${EcrImageUri}
-
-          # Pull and run container
           docker run --env-file /home/ec2-user/app.env -d --restart unless-stopped -p 8080:8080 ${EcrImageUri}
 
   TargetGroup:
@@ -212,12 +203,27 @@ Resources:
         - Key: idle_timeout.timeout_seconds
           Value: '3600'
 
-  Listener:
+  HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref LoadBalancer
       Port: 80
       Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: '443'
+            StatusCode: HTTP_301
+
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref AcmCertificateArn
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup

@@ -108,7 +108,7 @@
                   </div>
 
                   <div v-else-if="fieldKey === 'pictures'" class="flex-1 w-full">
-                    pictures uploader here
+                    <UFileUpload multiple :modelValue="value" @update:modelValue="val => updatePictureField(roomName, sectionName, fieldKey, val)" class="w-24" />
                   </div>
 
                   <UInput v-else :modelValue="value"
@@ -248,6 +248,10 @@ function updateField(room: string, section: string, key: string, value: string) 
   if (sectionMap instanceof Y.Map) {
     sectionMap.set(key, value)
   }
+}
+
+function updatePictureField(room: string, section: string, key: string, value: any) {
+  console.log(room, section, key,value)
 }
 
 function addRoom() {

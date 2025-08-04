@@ -6,9 +6,8 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui'],
   ssr: false,
   app: {
-    // baseURL: '/magnify_v2/',
     head: {
-      title: 'magnify'
+      title: 'Magnify'
     }
   },
   runtimeConfig: {
