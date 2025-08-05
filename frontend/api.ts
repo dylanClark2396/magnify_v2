@@ -21,3 +21,11 @@ export const loadDocs = async () => {
   })
   return docs
 }
+
+export const getSignedUrls = async (files: { fileName: string, contentType: string }[], docId: string ): Promise<{fileName: string, url: string, key: string}[]> => {
+  return await $fetch(`${config.public.apiBase}/get-signed-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: files, docId: docId })
+  })
+}

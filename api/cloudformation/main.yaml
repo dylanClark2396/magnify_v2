@@ -31,6 +31,11 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:Scan
                 Resource: arn:aws:dynamodb:us-east-1:943114872394:table/InspectionFormData
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: arn:aws:s3:::magnify-media-upload/*
 
   ### Lambda Function ###
   MainApiFunction:
@@ -85,6 +90,13 @@ Resources:
     Properties:
       ApiId: !Ref MainApi
       RouteKey: "GET /docs"
+      Target: !Sub integrations/${MainApiIntegration}
+
+  MainApiGetSignedUrlRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MainApi
+      RouteKey: "POST /get-signed-url"
       Target: !Sub integrations/${MainApiIntegration}
 
   ### Stage ###

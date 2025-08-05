@@ -6,9 +6,14 @@ import {
   PutCommand,
 } from "@aws-sdk/lib-dynamodb"
 import { validateBodyFields, validateQueryParams } from './utils'
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import { v4 as uuidv4 } from 'uuid'
 
+const s3 = new S3Client({ region: "us-east-1" })
 const client = new DynamoDBClient({})
 const docClient = DynamoDBDocumentClient.from(client)
+const BUCKET_NAME = "magnify-media-upload"
 
 export const handler = async (
   event: APIGatewayProxyEventV2
@@ -64,6 +69,35 @@ export const handler = async (
       statusCode: 200,
       headers: headers,
       body: JSON.stringify(data.Items)
+    }
+  } if (method === 'POST' && path == '/get-signed-url') {
+    const { body, error } = validateBodyFields(headers, event, ['docId', 'files']);
+    if (error) return error;
+
+    const files: { fileName: string, contentType: string }[] = body.files
+
+    const results = await Promise.all(
+      files.map(async ({ fileName, contentType }) => {
+        const ext = fileName.split(".").pop()
+        const uniqueName = `${uuidv4()}.${ext}`
+
+        const key = `${body.docId}/${uniqueName}`
+        const command = new PutObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: key,
+          ContentType: contentType,
+        })
+
+        const url = await getSignedUrl(s3, command, { expiresIn: 300 })
+
+        return { fileName, url, key }
+      })
+    )
+
+    return {
+      statusCode: 200,
+      headers: headers,
+      body: JSON.stringify(results)
     }
   } else {
 

@@ -108,7 +108,8 @@
                   </div>
 
                   <div v-else-if="fieldKey === 'pictures'">
-                    <UFileUpload multiple :modelValue="value" @update:modelValue="val => updatePictureField(roomName, sectionName, fieldKey, val)" />
+                    <UFileUpload multiple :modelValue="value"
+                      @update:modelValue="(...args) => updatePictureField(roomName, sectionName, fieldKey, args[0] as File[])" />
                   </div>
 
                   <UInput v-else :modelValue="value"
@@ -164,6 +165,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import * as Y from 'yjs'
 import type { RadioGroupItem, CheckboxGroupItem } from '@nuxt/ui'
+import { getSignedUrls } from '~/api'
 
 definePageMeta({ middleware: ['check-doc-id'] })
 
@@ -250,8 +252,39 @@ function updateField(room: string, section: string, key: string, value: string) 
   }
 }
 
-function updatePictureField(room: string, section: string, key: string, value: any) {
-  console.log(room, section, key,value)
+async function updatePictureField(room: string, section: string, key: string, value: File[]) {
+  console.log(room, section, key, value)
+  // call s3 uploader function 
+  // on success add picture file url location to doc as an array 
+
+  const files = value.map(file => ({
+    fileName: file.name,
+    contentType: file.type
+  }))
+
+  const signedUrls = await getSignedUrls(files, docId)
+
+  await Promise.all(signedUrls.map(async ({ url, key }: { url: string, key: string }, i: number) => {
+    const file = files[i]
+    if (file) {
+      const put: any = await $fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.contentType
+        },
+        body: file
+      })
+
+      if (!put.ok) throw new Error(`Failed to upload ${file?.fileName}`)
+      else {
+        console.log({
+          name: file.fileName,
+          key,
+          url: `https://magnify-media-upload.s3.amazonaws.com/${key}`
+        })
+      }
+    }
+  }))
 }
 
 function addRoom() {
