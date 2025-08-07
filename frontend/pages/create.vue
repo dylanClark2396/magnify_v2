@@ -87,23 +87,30 @@ async function createReport() {
   // Get or create the top-level metadata map
   const metaMap = doc.getMap('metadata')
 
-  // Create nested Y.Maps for inspector and property
-  const inspectorMap = new Y.Map()
-  inspectorMap.set('name', inspector.value.name)
-  inspectorMap.set('company', inspector.value.company)
-  inspectorMap.set('address', inspector.value.address)
+    // Create nested Y.Maps
+  const inspectorMap = new Y.Map(Object.entries(inspector.value))
 
-  const propertyMap = new Y.Map()
-  propertyMap.set('type', property.value.type)
-  propertyMap.set('occupancy', property.value.occupancy)
+  const propertyMap = new Y.Map([
+    ['type', property.value.type],
+    ['occupancy', property.value.occupancy],
+    ['attendance', Y.Array.from(property.value.attendance ?? [])]
+  ])
 
-  const attendanceArray = new Y.Array<string>()
-  property.value.attendance.forEach(att => attendanceArray.push([att]))
-  propertyMap.set('attendance', attendanceArray)
-
-  // Set nested maps inside metadata map
+  // Set nested maps in metadata
   metaMap.set('inspector', inspectorMap)
   metaMap.set('property', propertyMap)
+
+  // Optionally initialize a first room
+  const roomId = uuidv4()
+
+  const roomsMap = doc.getMap<Y.Map<any>>('roomdata')
+
+  const initialRoomMap = new Y.Map<any>()
+
+  initialRoomMap.set('name', new Y.Text('Kitchen'))
+  initialRoomMap.set('sections', new Y.Map<Y.Map<any>>())
+
+  roomsMap.set(roomId, initialRoomMap)
 
   await saveDoc(docId, doc)
 

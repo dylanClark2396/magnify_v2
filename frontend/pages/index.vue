@@ -56,22 +56,10 @@
 import { loadDocs } from '~/api'
 import type { Doc } from '~/domain'
 
-const docId = ref<string>('1')
-
 const docs = ref<Doc[]>([])
 
 onMounted(async () => {
   docs.value = await loadDocs()
 })
-
-const openDoc = async (docId: string) => {
-  await navigateTo({
-    path: '/inspection-form',
-    query: {
-      docId
-    },
-  })
-}
-
 
 </script>

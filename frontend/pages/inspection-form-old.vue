@@ -12,7 +12,7 @@
             class="block sm:hidden w-10 justify-center" title="Add Room" />
           <UButton icon="i-heroicons-plus" @click="addRoom" color="primary" :disabled="!newRoomName.trim()"
             class="hidden sm:inline-flex">
-            Add Room
+            + Add Room
           </UButton>
         </div>
       </div>
@@ -49,8 +49,7 @@
               @update:model-value="val => updateMetadataField('property', 'occupancy', val)"
               placeholder="Occupancy (e.g. Occupied - Furnished)" />
             <div class="md:col-span-2">
-              <UCheckboxGroup
-                :model-value="(metadata.get('property')?.get('attendance') as Y.Array<string>)?.toArray?.() ?? []"
+              <UCheckboxGroup :model-value="metadata.get('property')?.get('attendance') ?? []"
                 @update:model-value="val => updateMetadataField('property', 'attendance', val)"
                 :items="attendanceOptions" legend="Attendance" orientation="horizontal" />
             </div>
@@ -59,94 +58,89 @@
       </div>
 
       <!-- Rooms -->
-      <div v-for="[roomId, roomMap] of rooms.entries()" :key="roomId" class="space-y-6">
+      <div v-for="[roomName, room] in rooms" :key="roomName" class="space-y-6">
         <UCard class="bg-gray-800 text-gray-100">
           <template #header>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
               <div class="flex-1">
-                <UInput :model-value="String(roomMap.get('name') ?? '')"
-                  @update:model-value="val => updateRoomName(roomId, val)" placeholder="Room Name"
-                  class="flex-1 sm:w-48" />
+                <h2 class="text-xl font-bold">{{ roomName }}</h2>
               </div>
 
               <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-                <UInput v-model="newSectionNames[roomId]" placeholder="New Section Name" class="flex-1 sm:w-48" />
+                <UInput v-model="newSectionNames[roomName]" placeholder="New Section Name" size="sm"
+                  class="flex-1 sm:w-48" />
 
-                <UButton icon="i-heroicons-plus" size="sm" @click="addSection(roomId)"
-                  :disabled="!newSectionNames[roomId]?.trim()" class="block sm:hidden w-10 justify-center"
+                <UButton icon="i-heroicons-plus" size="sm" @click="addSection(roomName)"
+                  :disabled="!newSectionNames[roomName]?.trim()" class="block sm:hidden w-10 justify-center"
                   title="Add Section" />
-
-                <UButton icon="i-heroicons-plus" size="sm" @click="addSection(roomId)"
-                  :disabled="!newSectionNames[roomId]?.trim()" class="hidden sm:inline-flex">
-                  Add Section
+                <UButton icon="i-heroicons-plus" size="sm" @click="addSection(roomName)"
+                  :disabled="!newSectionNames[roomName]?.trim()" class="hidden sm:inline-flex">
+                  + Add Section
                 </UButton>
 
                 <UButton icon="i-heroicons-trash" color="error" variant="soft" size="sm"
-                  @click="confirmRoomDelete(roomId)" class="w-10 justify-center" title="Delete Room" />
+                  @click="confirmRoomDelete(roomName)" class="w-10 justify-center" title="Delete Room" />
               </div>
             </div>
           </template>
 
-          <!-- Section loop -->
-          <div v-for="[sectionId, sectionMap] of (roomMap.get('sections')?.entries?.() ?? [])" :key="sectionId"
-            class="space-y-4 overflow-x-auto">
+          <div v-for="[sectionName, section] in room.entries()" :key="sectionName"
+            class="space-y-4 mt-4 overflow-x-auto">
             <UCard class="bg-gray-700 min-w-[300px]">
               <template #header>
-                <div class="flex flex-row justify-between items-center gap-3 w-full">
-                  <div class="flex-1">
-                    <UInput :model-value="String(sectionMap.get('name') ?? '')"
-                      @update:model-value="val => updateSectionName(roomId, sectionId, val)" placeholder="Room Name"
-                      class="w-full sm:w-48" />
-                  </div>
+                <div class="flex justify-between items-center">
+                  <h3 class="text-lg font-semibold">{{ sectionName }}</h3>
                   <UButton icon="i-heroicons-trash" color="error" variant="soft" size="xs"
-                    @click="confirmSectionDelete(roomId, sectionId)" class="w-8 justify-center shrink-0"
+                    @click="confirmSectionDelete(roomName, sectionName)" class="w-8 justify-center"
                     title="Delete Section" />
                 </div>
               </template>
 
               <div class="space-y-3">
-                <div v-for="[fieldKey, value] of (sectionMap.get('fields')?.entries?.() ?? [])" :key="fieldKey"
+                <div v-for="[fieldKey, value] in (section as Y.Map<any>).entries()" :key="fieldKey"
                   class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <span class="w-full sm:w-32 font-medium">{{ fieldKey }}</span>
 
-                  <!-- Field: condition -->
                   <div v-if="fieldKey === 'condition'" class="flex-1 w-full">
-                    <URadioGroup :modelValue="value ?? ''" :items="conditionOptions"
-                      @update:modelValue="val => updateField(roomId, sectionId, fieldKey, val)" orientation="horizontal"
-                      color="secondary" :ui="{ base: 'ring-gray-900' }" />
+                    <URadioGroup :modelValue="section.get(fieldKey) ?? ''" :items="conditionOptions"
+                      @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)"
+                      orientation="horizontal" color="secondary" :ui="{ base: 'ring-gray-900' }" />
                   </div>
 
-                  <!-- Field: pictures -->
                   <div v-else-if="fieldKey === 'pictures'">
                     <div class="flex gap-4">
-                      <UFileUpload multiple layout="list" :model-value="getPictureModel(roomId, sectionId, fieldKey)"
-                        @update:model-value="(...args) => {
-                          setPictureModel(roomId, sectionId, fieldKey, args[0] as File[])
-                          updatePictureField(roomId, sectionId, args[0] as File[])
+                      <!-- File Upload -->
+                      <UFileUpload multiple layout="list"
+                        :model-value="getPictureModel(roomName, sectionName, fieldKey)" @update:modelValue="(...args) => {
+                          setPictureModel(roomName, sectionName, fieldKey, args[0] as File[])
+                          updatePictureField(roomName, sectionName, fieldKey, args[0] as File[])
                         }" />
 
                       <div class="flex flex-wrap gap-2">
-                        <div v-for="(info, i) in signedUrlCache.get(`${roomId}:${sectionId}`) || []"
+                        <div v-for="(info, i) in signedUrlCache.get(`${roomName}:${sectionName}`) || []"
                           :key="info.key ?? i" class="relative w-24 h-24 group">
+
+                          <!-- Image -->
                           <img :src="info.url" :alt="info.fileName" class="w-full h-full object-cover rounded-md" />
+
+                          <!-- Delete Button -->
                           <UButton icon="i-heroicons-x-mark" color="neutral" variant="outline" size="xs"
-                            class="absolute top-0 right-0" @click="removeImage(roomId, sectionId, info.key)" />
+                            class="absolute top-0 right-0" @click="removeImage(roomName, sectionName, info.key)" />
                         </div>
                       </div>
+
                     </div>
                   </div>
 
-                  <!-- Field: default -->
-                  <UInput v-else :model-value="value"
-                    @update:model-value="val => updateField(roomId, sectionId, fieldKey, val)" class="flex-1 w-full" />
+                  <UInput v-else :modelValue="value"
+                    @update:modelValue="val => updateField(roomName, sectionName, fieldKey, val)" size="sm"
+                    class="flex-1 w-full" />
                 </div>
               </div>
-
             </UCard>
           </div>
         </UCard>
       </div>
-
     </UContainer>
 
     <!-- Confirm Delete Room Modal -->
@@ -173,8 +167,8 @@
         <div>
           <p>
             Are you sure you want to delete the section
-            <strong>{{ sectionToDelete?.sectionId }}</strong> in room
-            <strong>{{ sectionToDelete?.roomId }}</strong>?
+            <strong>{{ sectionToDelete?.section }}</strong> in room
+            <strong>{{ sectionToDelete?.room }}</strong>?
           </p>
           <div class="flex justify-end gap-2">
             <UButton label="Delete" color="error" @click="deleteConfirmedSection" />
@@ -192,7 +186,6 @@ import { useRoute } from 'vue-router'
 import * as Y from 'yjs'
 import type { RadioGroupItem, CheckboxGroupItem } from '@nuxt/ui'
 import { deleteFormMedia, getSignedUrls } from '~/api'
-import { v4 as uuidv4 } from 'uuid'
 
 definePageMeta({ middleware: ['check-doc-id'] })
 
@@ -207,7 +200,7 @@ ws.binaryType = 'arraybuffer'
 
 const yMetaData = doc.getMap<Y.Map<any>>('metadata')
 const metadata = ref<Map<string, Y.Map<any>>>(new Map())
-const yRooms = doc.getMap<Y.Map<Y.Map<any>>>('roomdata')
+const yRooms = doc.getMap<Y.Map<Y.Map<any>>>('rooms')
 const rooms = ref<Map<string, Y.Map<Y.Map<any>>>>(new Map())
 
 const newRoomName = ref('')
@@ -225,7 +218,7 @@ const showDeleteRoomModal = ref(false)
 const showDeleteSectionModal = ref(false)
 
 const roomToDelete = ref<string | null>(null)
-const sectionToDelete = ref<{ roomId: string; sectionId: string } | null>(null)
+const sectionToDelete = ref<{ room: string; section: string } | null>(null)
 
 const pictureModels = reactive(new Map<string, File[]>())
 
@@ -271,99 +264,29 @@ onMounted(() => {
 
 })
 
-function ensureDefaultFields(room: Y.Map<any>, sectionId: string) {
-  const sectionsMap = room.get('sections')
-  if (!(sectionsMap instanceof Y.Map)) return
-
-  const section = sectionsMap.get(sectionId)
-  if (!(section instanceof Y.Map)) return
-
-  const fields = section.get('fields')
-  if (!(fields instanceof Y.Map)) return
-
-  console.log('ensureDefaultFields', room.toJSON())
+function ensureDefaultFields(room: Y.Map<Y.Map<any>>, sectionName: string) {
+  const section = room.get(sectionName)
+  if (!section) return
 
   const defaults = ['condition', 'materials', 'location', 'observations', 'pictures']
   for (const key of defaults) {
-    if (!fields.has(key)) {
-      fields.set(key, '')  // initialize empty string for default fields
-    }
+    if (!section.has(key)) section.set(key, '');
   }
 }
 
-
 function updateMetadataField(section: string, key: string, value: any) {
-  let sectionMap = yMetaData.get(section)
-
-  if (!(sectionMap instanceof Y.Map)) {
-    sectionMap = new Y.Map()
-    yMetaData.set(section, sectionMap)
-  }
-
-  const existing = sectionMap.get(key)
-
-  // Handle Y.Array updates for array-type values
-  if (existing instanceof Y.Array && Array.isArray(value)) {
-    existing.delete(0, existing.length)
-    existing.insert(0, value)
-  }
-  // Create a new Y.Array if not present yet
-  else if (key === 'attendance' && Array.isArray(value)) {
-    const yArray = new Y.Array<string>()
-    yArray.insert(0, value)
-    sectionMap.set(key, yArray)
-  }
-  // Primitive or other types
-  else {
+  const sectionMap = yMetaData.get(section)
+  if (sectionMap instanceof Y.Map) {
     sectionMap.set(key, value)
   }
 }
 
-function updateRoomName(roomId: string, newName: string) {
-  const roomMap = yRooms.get(roomId)
-  if (roomMap instanceof Y.Map) {
-    const yName = roomMap.get('name')
-    if (yName instanceof Y.Text) {
-      yName.delete(0, yName.length)
-      yName.insert(0, newName.trim())
-    }
+function updateField(room: string, section: string, key: string, value: string) {
+  const sectionMap = yRooms.get(room)?.get(section)
+  if (sectionMap instanceof Y.Map) {
+    sectionMap.set(key, value)
   }
 }
-
-function updateSectionName(roomId: string, sectionId: string, newName: string) {
-  const roomMap = yRooms.get(roomId)
-  if (!(roomMap instanceof Y.Map)) return
-
-  const sectionsMap = roomMap.get('sections')
-  if (!(sectionsMap instanceof Y.Map)) return
-
-  const sectionMap = sectionsMap.get(sectionId)
-  if (!(sectionMap instanceof Y.Map)) return
-
-  // Update the Y.Text name inside the sectionMap
-  const yName = sectionMap.get('name')
-  if (yName instanceof Y.Text) {
-    yName.delete(0, yName.length)       // Clear existing text
-    yName.insert(0, newName.trim())     // Insert new name
-  }
-}
-
-function updateField(roomId: string, sectionId: string, key: string, value: string) {
-  const roomMap = yRooms.get(roomId)
-  if (!roomMap) return
-
-  const sectionsMap = roomMap.get('sections')
-  if (!(sectionsMap instanceof Y.Map)) return
-
-  const section = sectionsMap.get(sectionId)
-  if (!(section instanceof Y.Map)) return
-
-  const fields = section.get('fields')
-  if (!(fields instanceof Y.Map)) return
-
-  fields.set(key, value)
-}
-
 
 async function fetchAllMedia() {
   const uniqueFileMap = new Map<string, {
@@ -374,33 +297,26 @@ async function fetchAllMedia() {
   }>()
 
   // Step 1: Gather all unique picture keys from all rooms/sections
-  for (const [roomId, roomMap] of yRooms.entries()) {
-    const sections = roomMap?.get('sections')
-    if (!(sections instanceof Y.Map)) continue
+  for (const [roomName, roomMap] of yRooms.entries()) {
+    for (const [sectionName, sectionMap] of roomMap.entries()) {
+      const pictures = sectionMap.get('pictures')
 
-    for (const [sectionId, section] of sections.entries()) {
-      if (!(section instanceof Y.Map)) continue
+      if (pictures instanceof Y.Array) {
+        const keys = new Set(pictures.toArray()) // dedupe here
 
-      const fields = section.get('fields')
-      if (!(fields instanceof Y.Map)) continue
+        for (const value of keys) {
+          const parts = value.split('/')
+          const fileName = parts[3] || ''
+          const contentType = `image/${fileName.split('.').pop() || 'jpeg'}`
+          const s3Key = value // full S3 key used for indexing
 
-      const pictures = fields.get('pictures')
-      if (!(pictures instanceof Y.Array)) continue
-
-      const keys = new Set(pictures.toArray()) // dedupe
-
-      for (const value of keys) {
-        const parts = value.split('/')
-        const fileName = parts[3] || ''
-        const contentType = `image/${fileName.split('.').pop() || 'jpeg'}`
-        const s3Key = value
-
-        uniqueFileMap.set(s3Key, {
-          fileName,
-          contentType,
-          room: roomId,
-          section: sectionId,
-        })
+          uniqueFileMap.set(s3Key, {
+            fileName,
+            contentType,
+            room: roomName,
+            section: sectionName,
+          })
+        }
       }
     }
   }
@@ -415,38 +331,33 @@ async function fetchAllMedia() {
       fileName: string
       url: string
       key: string
-    }>>()
+    }>>() // Map<room:section, Map<key, fileInfo>>
 
     for (const signedUrl of signedUrls) {
       const { room, section, ...rest } = signedUrl
-      const cacheKey = `${room}:${section}`
+      const key = `${room}:${section}`
 
-      if (!cacheMap.has(cacheKey)) cacheMap.set(cacheKey, new Map())
-      cacheMap.get(cacheKey)!.set(rest.key, rest)
+      if (!cacheMap.has(key)) cacheMap.set(key, new Map())
+      cacheMap.get(key)!.set(rest.key, rest)
     }
 
     for (const [roomSectionKey, filesMap] of cacheMap.entries()) {
       signedUrlCache.set(roomSectionKey, Array.from(filesMap.values()))
     }
   }
-
 }
 
 
-async function updatePictureField(roomId: string, sectionId: string, files: File[]) {
+async function updatePictureField(room: string, section: string, key: string, files: File[]) {
 
   const fileInfo = files.map(file => ({
     fileName: file.name,
     contentType: file.type,
-    room: roomId,
-    section: sectionId
+    room,
+    section
   }))
 
-  console.log(roomId, sectionId)
-
   const signedUrls = await getSignedUrls(fileInfo, "PUT", docId)
-
-  console.log(signedUrls)
 
   await Promise.all(signedUrls.map(async ({ url, key }: { url: string, key: string }, i: number) => {
     const file = files[i]
@@ -462,49 +373,40 @@ async function updatePictureField(roomId: string, sectionId: string, files: File
       if (!put.ok) throw new Error(`Failed to upload ${file.name}`)
       else {
 
-        const roomMap = yRooms.get(roomId)
-        if (!roomMap) return
-
-        const sectionsMap = roomMap.get('sections')
-        if (!(sectionsMap instanceof Y.Map)) return
-
-        const section = sectionsMap.get(sectionId)
-        if (!(section instanceof Y.Map)) return
-
-        const fields = section.get('fields')
-        if (!(fields instanceof Y.Map)) return
-
-        if (section instanceof Y.Map) {
+        const sectionMap = yRooms.get(room)?.get(section)
+        if (sectionMap instanceof Y.Map) {
           // Get or create the Y.Array
-          let yArray = fields.get('pictures')
+          let yArray = sectionMap.get('pictures')
           if (!(yArray instanceof Y.Array)) {
             yArray = new Y.Array()
-            fields.set('pictures', yArray)
+            sectionMap.set('pictures', yArray)
           }
 
           // Append the new file info object to the Y.Array
           yArray.push([key])
         }
       }
+
+
     }
   }))
 
   await getSignedUrls(fileInfo, "GET", docId).then((urls) => {
     urls.forEach((url) => {
       // set uploaded files in image cache
-      addToSignedUrlCache(roomId, sectionId, { fileName: url.fileName, url: url.url, key: url.key })
+      addToSignedUrlCache(room, section, { fileName: url.fileName, url: url.url, key: url.key })
     })
     // remove image from picture model
-    setPictureModel(roomId, sectionId, "pictures", [])
+    setPictureModel(room, section, "pictures", [])
   })
 }
 
-function addToSignedUrlCache(roomId: string, sectionId: string, entry: {
+function addToSignedUrlCache(room: string, section: string, entry: {
   fileName: string
   url: string
   key: string
 }) {
-  const roomSectionKey = `${roomId}:${sectionId}`
+  const roomSectionKey = `${room}:${section}`
   if (!signedUrlCache.has(roomSectionKey)) {
     signedUrlCache.set(roomSectionKey, [entry])
   } else {
@@ -514,54 +416,43 @@ function addToSignedUrlCache(roomId: string, sectionId: string, entry: {
   }
 }
 
+
 function addRoom() {
   const name = newRoomName.value.trim()
-  const roomId = uuidv4()
-  const roomMap = new Y.Map<any>()
+  if (!name || yRooms.has(name)) return
 
-  roomMap.set('name', new Y.Text(name))
-  roomMap.set('sections', new Y.Map<Y.Map<any>>())
-
-  yRooms.set(roomId, roomMap)
-  newRoomName.value = ''
-  newSectionNames[roomId] = ''
-}
-
-function addSection(roomId: string) {
-  const sectionName = newSectionNames[roomId]?.trim()
-  if (!sectionName) return
-
-  const sectionId = uuidv4()
-  const roomMap = yRooms.get(roomId)
-  if (!(roomMap instanceof Y.Map)) return
-
-  // Get or create the sections map inside the room
-  let sectionsMap = roomMap.get('sections')
-  if (!(sectionsMap instanceof Y.Map)) {
-    sectionsMap = new Y.Map()
-    roomMap.set('sections', sectionsMap)
+  // 🧹 Clean any stale cache keys just in case
+  for (const key of signedUrlCache.keys()) {
+    if (key.startsWith(`${name}:`)) {
+      signedUrlCache.delete(key)
+    }
   }
 
-  // Create the new section map with proper fields
-  const sectionMap = new Y.Map()
-  sectionMap.set('sectionid', sectionId)
-  sectionMap.set('name', new Y.Text(sectionName))
-  sectionMap.set('fields', new Y.Map())
-
-  // Add the new section to the sections map
-  sectionsMap.set(sectionId, sectionMap)
-
-  // Call your existing function to add default fields if needed
-  ensureDefaultFields(roomMap, sectionId)
-
-  // Clear input field for new section name
-  newSectionNames[roomId] = ''
+  yRooms.set(name, new Y.Map<Y.Map<any>>())
+  newRoomName.value = ''
 }
 
+function addSection(roomName: string) {
+  const section = newSectionNames[roomName]?.trim()
+  if (!section) return
 
-async function removeSection(roomId: string, sectionId: string) {
-  const roomMap = yRooms.get(roomId)
-  const sectionMap = roomMap?.get(sectionId)
+  const roomMap = yRooms.get(roomName)
+  if (roomMap && !roomMap.has(section)) {
+    const sectionMap = new Y.Map()
+    roomMap.set(section, sectionMap)
+
+    // 🧹 Clean any stale cache entry for this room/section combo
+    const key = `${roomName}:${section}`
+    signedUrlCache.delete(key)
+
+    ensureDefaultFields(roomMap, section)
+    newSectionNames[roomName] = ''
+  }
+}
+
+async function removeSection(roomName: string, sectionName: string) {
+  const roomMap = yRooms.get(roomName)
+  const sectionMap = roomMap?.get(sectionName)
 
   // Collect picture S3 keys (if they exist)
   const s3Keys: string[] = []
@@ -571,12 +462,12 @@ async function removeSection(roomId: string, sectionId: string) {
   }
 
   // Delete from signed URL cache
-  const cacheKey = `${roomId}:${sectionId}`
+  const cacheKey = `${roomName}:${sectionName}`
   signedUrlCache.delete(cacheKey)
 
   // Remove section from yjs
-  if (roomMap?.has(sectionId)) {
-    roomMap.delete(sectionId)
+  if (roomMap?.has(sectionName)) {
+    roomMap.delete(sectionName)
   }
 
   // Delete pictures from S3
@@ -585,8 +476,8 @@ async function removeSection(roomId: string, sectionId: string) {
   }
 }
 
-async function removeRoom(roomId: string) {
-  const roomMap = yRooms.get(roomId)
+async function removeRoom(roomName: string) {
+  const roomMap = yRooms.get(roomName)
   const s3Keys: string[] = []
 
   if (roomMap) {
@@ -600,15 +491,15 @@ async function removeRoom(roomId: string) {
 
   // Delete from signedUrlCache all keys for this room
   for (const key of signedUrlCache.keys()) {
-    if (key.startsWith(`${roomId}:`)) {
+    if (key.startsWith(`${roomName}:`)) {
       signedUrlCache.delete(key)
     }
   }
 
-  // Remove room and related newsectionIds entry
-  if (yRooms.has(roomId)) {
-    yRooms.delete(roomId)
-    delete newSectionNames[roomId]
+  // Remove room and related newSectionNames entry
+  if (yRooms.has(roomName)) {
+    yRooms.delete(roomName)
+    delete newSectionNames[roomName]
   }
 
   // Delete all S3 files for this room
@@ -617,8 +508,8 @@ async function removeRoom(roomId: string) {
   }
 }
 
-async function removeImage(roomId: string, sectionId: string, key: string) {
-  const sectionMap = yRooms.get(roomId)?.get(sectionId)
+async function removeImage(roomName: string, sectionName: string, key: string) {
+  const sectionMap = yRooms.get(roomName)?.get(sectionName)
   const pictures = sectionMap?.get('pictures')
 
   if (pictures instanceof Y.Array) {
@@ -627,7 +518,7 @@ async function removeImage(roomId: string, sectionId: string, key: string) {
   }
 
   // Remove from cache
-  const cacheKey = `${roomId}:${sectionId}`
+  const cacheKey = `${roomName}:${sectionName}`
   const current = signedUrlCache.get(cacheKey)
   if (current) {
     signedUrlCache.set(
@@ -641,13 +532,13 @@ async function removeImage(roomId: string, sectionId: string, key: string) {
 
 
 
-function confirmRoomDelete(roomId: string) {
-  roomToDelete.value = roomId
+function confirmRoomDelete(roomName: string) {
+  roomToDelete.value = roomName
   showDeleteRoomModal.value = true
 }
 
-function confirmSectionDelete(roomId: string, sectionId: string) {
-  sectionToDelete.value = { roomId, sectionId }
+function confirmSectionDelete(room: string, section: string) {
+  sectionToDelete.value = { room, section }
   showDeleteSectionModal.value = true
 }
 
@@ -661,19 +552,19 @@ function deleteConfirmedRoom() {
 
 function deleteConfirmedSection() {
   if (sectionToDelete.value) {
-    removeSection(sectionToDelete.value.roomId, sectionToDelete.value.sectionId)
+    removeSection(sectionToDelete.value.room, sectionToDelete.value.section)
     sectionToDelete.value = null
     showDeleteSectionModal.value = false
   }
 }
 
-function getPictureModel(roomId: string, sectionId: string, field: string): File[] {
-  const key = `${roomId}:${sectionId}:${field}`
+function getPictureModel(room: string, section: string, field: string): File[] {
+  const key = `${room}:${section}:${field}`
   return pictureModels.get(key) || []
 }
 
-function setPictureModel(roomId: string, sectionId: string, field: string, files: File[]) {
-  const key = `${roomId}:${sectionId}:${field}`
+function setPictureModel(room: string, section: string, field: string, files: File[]) {
+  const key = `${room}:${section}:${field}`
   pictureModels.set(key, files)
 }
 

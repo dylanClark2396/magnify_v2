@@ -35,6 +35,7 @@ Resources:
                 Action:
                   - s3:PutObject
                   - s3:GetObject
+                  - s3:DeleteObject
                 Resource: arn:aws:s3:::magnify-media-upload/*
 
   ### Lambda Function ###
@@ -97,6 +98,13 @@ Resources:
     Properties:
       ApiId: !Ref MainApi
       RouteKey: "POST /get-signed-url"
+      Target: !Sub integrations/${MainApiIntegration}
+
+  MainApiDeleteFormMediaRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref MainApi
+      RouteKey: "POST /delete-form-media"
       Target: !Sub integrations/${MainApiIntegration}
 
   ### Stage ###
